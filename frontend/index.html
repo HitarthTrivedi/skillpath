@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Student Growth Planner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">🎓 Growth Planner</div>
+            <div class="nav-menu" id="navMenu">
+                <button class="nav-link" data-page="onboarding">Onboarding</button>
+                <button class="nav-link" data-page="roadmap">My Roadmap</button>
+                <button class="nav-link" data-page="progress">Progress</button>
+                <button class="nav-link" data-page="profile">Profile Builder</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="container">
+            <!-- Onboarding Page -->
+            <section id="onboarding-page" class="page active">
+                <div class="card">
+                    <h1>Welcome! Let's Build Your Growth Path 🚀</h1>
+                    <p class="subtitle">Tell us about yourself and your career goals</p>
+
+                    <form id="onboarding-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="name">Full Name *</label>
+                                <input type="text" id="name" name="name" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">Email *</label>
+                                <input type="email" id="email" name="email" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="major">Major/Field of Study *</label>
+                                <input type="text" id="major" name="major"
+                                       placeholder="e.g., Computer Science, Business, Engineering" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="gpa">GPA (Optional)</label>
+                                <input type="number" id="gpa" name="gpa" step="0.01" min="0" max="4.0"
+                                       placeholder="0.00 - 4.00">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="career-aspirations">Career Aspirations *</label>
+                            <textarea id="career-aspirations" name="career_aspirations" rows="3" required
+                                      placeholder="Describe your dream job, target industries, or career goals..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="current-skills">Current Skills *</label>
+                            <input type="text" id="current-skills" name="current_skills"
+                                   placeholder="e.g., Python, Leadership, Data Analysis (comma separated)" required>
+                            <small>Separate multiple skills with commas</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="learning-style">Preferred Learning Style *</label>
+                                <select id="learning-style" name="preferred_learning" required>
+                                    <option value="">Select...</option>
+                                    <option value="visual">Visual (videos, diagrams)</option>
+                                    <option value="hands-on">Hands-on (projects, practice)</option>
+                                    <option value="reading">Reading (articles, books)</option>
+                                    <option value="mixed">Mixed approach</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="time-commitment">Weekly Time Commitment *</label>
+                                <select id="time-commitment" name="time_commitment" required>
+                                    <option value="">Select...</option>
+                                    <option value="5-10 hours">5-10 hours/week</option>
+                                    <option value="10-15 hours">10-15 hours/week</option>
+                                    <option value="15-20 hours">15-20 hours/week</option>
+                                    <option value="20+ hours">20+ hours/week</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timeline">Growth Path Timeline</label>
+                            <select id="timeline" name="timeline">
+                                <option value="6">6 months</option>
+                                <option value="12" selected>12 months (1 year)</option>
+                                <option value="18">18 months</option>
+                                <option value="24">24 months (2 years)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-large">
+                            Generate My Growth Path ✨
+                        </button>
+                    </form>
+
+                    <div id="onboarding-status" class="status-message"></div>
+                </div>
+            </section>
+
+            <!-- Roadmap Page -->
+            <section id="roadmap-page" class="page">
+                <div class="card">
+                    <div class="page-header">
+                        <h1>Your Personalized Growth Roadmap 🗺️</h1>
+                        <button class="btn btn-secondary" id="refresh-roadmap">
+                            🔄 Refresh Roadmap
+                        </button>
+                    </div>
+
+                    <div id="profile-analysis" class="analysis-section"></div>
+
+                    <div id="roadmap-content" class="roadmap-container">
+                        <p class="empty-state">Complete onboarding to generate your roadmap</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Progress Page -->
+            <section id="progress-page" class="page">
+                <div class="card">
+                    <h1>Track Your Progress 📊</h1>
+
+                    <div id="progress-summary" class="progress-summary"></div>
+
+                    <div class="progress-filters">
+                        <button class="filter-btn active" data-filter="all">All Tasks</button>
+                        <button class="filter-btn" data-filter="course">Courses</button>
+                        <button class="filter-btn" data-filter="project">Projects</button>
+                        <button class="filter-btn" data-filter="certificate">Certificates</button>
+                        <button class="filter-btn" data-filter="internship">Internships</button>
+                        <button class="filter-btn" data-filter="test">Tests</button>
+                    </div>
+
+                    <div id="progress-tasks" class="tasks-container"></div>
+                </div>
+            </section>
+
+            <!-- Profile Builder Page -->
+            <section id="profile-page" class="page">
+                <div class="card">
+                    <div class="page-header">
+                        <h1>Professional Profile Builder 💼</h1>
+                        <button class="btn btn-secondary" id="refresh-profile">
+                            🔄 Refresh Content
+                        </button>
+                    </div>
+
+                    <div class="profile-tabs">
+                        <button class="tab-btn active" data-tab="resume">Resume</button>
+                        <button class="tab-btn" data-tab="linkedin">LinkedIn</button>
+                    </div>
+
+                    <!-- Resume Tab -->
+                    <div id="resume-tab" class="tab-content active">
+                        <div class="resume-section">
+                            <h2>Auto-Generated Resume</h2>
+                            <div id="resume-content" class="resume-display">
+                                <p class="empty-state">Complete tasks to build your resume</p>
+                            </div>
+                            <button class="btn btn-primary" id="download-resume">
+                                📄 Download Resume (JSON)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- LinkedIn Tab -->
+                    <div id="linkedin-tab" class="tab-content">
+                        <div class="linkedin-section">
+                            <h2>LinkedIn Suggestions</h2>
+                            <div id="linkedin-content" class="linkedin-display">
+                                <p class="empty-state">Generate content suggestions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Generating with AI...</p>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
