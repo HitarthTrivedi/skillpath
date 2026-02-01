@@ -113,21 +113,35 @@ def onboard_user():
         profile = StudentProfile(user_id=user_id)
 
     profile.major = data.get('major')
+    profile.university = data.get('university')
     profile.gpa = data.get('gpa')
     profile.career_aspirations = data.get('career_aspirations')
     profile.set_skills(data.get('current_skills', []))
+    profile.experience_level = data.get('experience_level')
+    profile.set_target_industries(data.get('target_industries', []))
     profile.preferred_learning = data.get('preferred_learning')
+    profile.set_preferred_content_types(data.get('preferred_content_types', []))
     profile.time_commitment = data.get('time_commitment')
+    
+    # New Fields
+    profile.profile_photo = data.get('profile_photo')
+    profile.relocation_goal = data.get('relocation_goal')
+    profile.set_extracurricular_interests(data.get('extracurricular_interests', []))
+    profile.planning_horizon_years = data.get('planning_horizon_years', 1)
 
     # Analyze profile with Gemini
     if gemini_service:
         try:
             analysis = gemini_service.analyze_student_profile({
                 'major': profile.major,
+                'university': profile.university,
                 'gpa': profile.gpa,
                 'career_aspirations': profile.career_aspirations,
                 'current_skills': profile.get_skills(),
+                'experience_level': profile.experience_level,
+                'target_industries': profile.get_target_industries(),
                 'preferred_learning': profile.preferred_learning,
+                'preferred_content_types': profile.get_preferred_content_types(),
                 'time_commitment': profile.time_commitment
             })
             profile.set_analysis(analysis)
@@ -166,6 +180,36 @@ def get_user_profile(user_id):
     }), 200
 
 
+@app.route('/api/v1/profile/details', methods=['POST'])
+def update_profile_details():
+    """Update contact and social details"""
+    data = request.json
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'error': 'user_id is required'}), 400
+        
+    profile = StudentProfile.query.filter_by(user_id=user_id).first()
+    if not profile:
+        return jsonify({'error': 'Profile not found'}), 404
+        
+    if 'phone_number' in data:
+        profile.phone_number = data['phone_number']
+    if 'linkedin_url' in data:
+        profile.linkedin_url = data['linkedin_url']
+    if 'github_url' in data:
+        profile.github_url = data['github_url']
+    if 'portfolio_url' in data:
+        profile.portfolio_url = data['portfolio_url']
+        
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Profile details updated',
+        'profile': profile.to_dict()
+    }), 200
+
+
 # ============================================================================
 # GROWTH PATH ENDPOINTS
 # ============================================================================
@@ -194,8 +238,12 @@ def generate_growth_path():
         roadmap = gemini_service.generate_growth_path(
             profile_data={
                 'major': profile.major,
+                'university': profile.university,
                 'career_aspirations': profile.career_aspirations,
+                'experience_level': profile.experience_level,
+                'target_industries': profile.get_target_industries(),
                 'current_skills': profile.get_skills(),
+                'preferred_content_types': profile.get_preferred_content_types(),
                 'time_commitment': profile.time_commitment
             },
             analysis=profile.get_analysis(),
@@ -477,21 +525,50 @@ def update_professional_profile(user_id, completed_item):
 def get_resume(user_id):
     """Get auto-generated resume"""
     profile = ProfessionalProfile.query.filter_by(user_id=user_id).first()
+    user_profile = StudentProfile.query.filter_by(user_id=user_id).first()
+    user = User.query.get(user_id)
 
-    if not profile:
-        return jsonify({
-            'resume': {
-                'projects': [],
-                'experience': [],
-                'certifications': [],
-                'skills': []
-            }
-        }), 200
+    if not user_profile:
+        return jsonify({'error': 'User profile not found'}), 404
 
+    # Base resume structure
+    full_resume = {
+        'header': {
+            'name': user.name,
+            'email': user.email,
+            'phone': user_profile.phone_number,
+            'location': user_profile.relocation_goal or "Open to relocation",
+            'linkedin': user_profile.linkedin_url,
+            'github': user_profile.github_url,
+            'portfolio': user_profile.portfolio_url,
+        },
+        'education': {
+            'university': user_profile.university,
+            'major': user_profile.major,
+            'gpa': user_profile.gpa,
+            'graduation_year': 'Present' # Placeholder or calculate
+        },
+        'skills': user_profile.get_skills(),
+        'projects': [],
+        'experience': [],
+        'certifications': []
+    }
+
+    # Merge with auto-generated content if available
+    if profile:
+        generated_content = profile.get_resume()
+        full_resume['projects'] = generated_content.get('projects', [])
+        full_resume['experience'] = generated_content.get('experience', [])
+        full_resume['certifications'] = generated_content.get('certifications', [])
+        # If generated content has skills, maybe merge them or prefer them? 
+        # For now, let's stick to the user's core skills plus any learned ones
+        
     return jsonify({
-        'resume': profile.get_resume(),
-        'last_generated': profile.last_generated.isoformat()
+        'resume': full_resume,
+        'last_generated': profile.last_generated.isoformat() if profile else None
     }), 200
+
+
 
 
 @app.route('/api/v1/profile/<int:user_id>/linkedin', methods=['GET'])

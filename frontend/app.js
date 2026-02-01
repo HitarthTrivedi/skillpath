@@ -72,7 +72,7 @@ function initNavigation() {
 function loadPageData(page) {
     if (!AppState.currentUser) return;
 
-    switch(page) {
+    switch (page) {
         case 'roadmap':
             loadRoadmap();
             break;
@@ -88,6 +88,171 @@ function loadPageData(page) {
 // Onboarding
 function initOnboarding() {
     const form = document.getElementById('onboarding-form');
+    // Ensure we start at step 1
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    const nextBtn = document.getElementById('next-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Multi-step visibility logic
+    function updateStepVisibility() {
+        // Safe check for elements
+        const steps = document.querySelectorAll('.form-step');
+        if (!steps.length) return;
+
+        steps.forEach(step => step.classList.remove('active'));
+
+        const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
+        if (currentStepEl) currentStepEl.classList.add('active');
+
+        document.querySelectorAll('.step-dot').forEach(dot => {
+            const step = parseInt(dot.dataset.step);
+            if (step <= currentStep) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
+
+        if (prevBtn) prevBtn.style.display = currentStep > 1 ? 'inline-flex' : 'none';
+
+        if (currentStep === totalSteps) {
+            if (nextBtn) nextBtn.style.display = 'none';
+            if (submitBtn) submitBtn.style.display = 'inline-flex';
+        } else {
+            if (nextBtn) nextBtn.style.display = 'inline-flex';
+            if (submitBtn) submitBtn.style.display = 'none';
+        }
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            // Debug: console.log('Next button clicked');
+            const currentStepEl = document.querySelector(`.form-step[data-step="${currentStep}"]`);
+            if (!currentStepEl) return;
+
+            const inputs = currentStepEl.querySelectorAll('input, select, textarea');
+            let isValid = true;
+            let firstInvalid = null;
+
+            inputs.forEach(input => {
+                // Ignore hidden inputs (like photo base64) unless explicitly required
+                if (input.type === 'hidden') return;
+
+                // Reset error state
+                input.classList.remove('error');
+
+                if (!input.checkValidity()) {
+                    input.reportValidity();
+                    input.classList.add('error');
+                    isValid = false;
+                    if (!firstInvalid) firstInvalid = input;
+                }
+            });
+
+            if (isValid) {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    updateStepVisibility();
+                }
+            } else {
+                // Focus the first invalid field
+                if (firstInvalid) firstInvalid.focus();
+                showToast('Please fill in all required fields.', 'error');
+            }
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (currentStep > 1) {
+                currentStep--;
+                updateStepVisibility();
+            }
+        });
+    }
+
+    // --- Interaction Logic (Moved inside to ensure elements exist) ---
+
+    // Photo Upload
+    const photoInput = document.getElementById('profile-photo-input');
+    const photoPreview = document.getElementById('profile-preview');
+    const photoBase64 = document.getElementById('profile-photo-base64');
+
+    if (photoInput && photoPreview && photoBase64) {
+        photoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    showToast('Please upload a valid image file', 'error');
+                    return;
+                }
+
+                // Validate file size (e.g., < 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast('Image is too large (max 2MB)', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    // Update DOM explicitly
+                    photoPreview.innerHTML = ''; // Clear text
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = "Profile Preview";
+                    // Apply inline styles to be absolutely sure
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    img.style.borderRadius = '50%';
+
+                    photoPreview.appendChild(img);
+
+                    photoBase64.value = e.target.result;
+                };
+                reader.onerror = function () {
+                    showToast('Error reading file', 'error');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Relocation Toggle
+    const relocationToggle = document.getElementById('relocation-toggle');
+    const relocationInputGroup = document.getElementById('relocation-input-group');
+    const relocationStatus = document.getElementById('relocation-status');
+    const relocationGoal = document.getElementById('relocation-goal');
+
+    if (relocationToggle && relocationInputGroup && relocationStatus) {
+        relocationToggle.addEventListener('change', () => {
+            if (relocationToggle.checked) {
+                relocationInputGroup.style.display = 'block';
+                relocationStatus.textContent = 'Yes';
+                if (relocationGoal) relocationGoal.required = true;
+            } else {
+                relocationInputGroup.style.display = 'none';
+                relocationStatus.textContent = 'No';
+                if (relocationGoal) relocationGoal.required = false;
+            }
+        });
+    }
+
+    // Planning Horizon Slider
+    const horizonSlider = document.getElementById('planning-horizon');
+    const horizonValue = document.getElementById('horizon-value');
+
+    if (horizonSlider && horizonValue) {
+        horizonSlider.addEventListener('input', () => {
+            const val = horizonSlider.value;
+            horizonValue.textContent = `${val} Year${val > 1 ? 's' : ''}`;
+        });
+    }
+    // --- End Interaction Logic ---
+
+    // Initialize
+    updateStepVisibility();
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -99,14 +264,25 @@ function initOnboarding() {
                 name: formData.get('name'),
                 email: formData.get('email'),
                 major: formData.get('major'),
+                university: formData.get('university'),
                 gpa: parseFloat(formData.get('gpa')) || null,
                 career_aspirations: formData.get('career_aspirations'),
+                target_industries: formData.get('target_industries').split(',').map(s => s.trim()),
                 current_skills: formData.get('current_skills').split(',').map(s => s.trim()),
+                experience_level: formData.get('experience_level'),
                 preferred_learning: formData.get('preferred_learning'),
-                time_commitment: formData.get('time_commitment')
+                preferred_content_types: formData.get('preferred_content_types') ? formData.get('preferred_content_types').split(',').map(s => s.trim()) : [],
+                time_commitment: formData.get('time_commitment'),
+
+                // New Fields
+                profile_photo: document.getElementById('profile-photo-base64').value || null,
+                relocation_goal: relocationToggle.checked ? formData.get('relocation_goal') : null,
+                extracurricular_interests: formData.get('extracurricular_interests') ? formData.get('extracurricular_interests').split(',').map(s => s.trim()) : [],
+                planning_horizon_years: parseInt(horizonSlider.value)
             };
 
-            const timeline = parseInt(formData.get('timeline'));
+            // Using years directly, no specific timeline conversion needed for API beyond this
+            const timeline = parseInt(horizonSlider.value) * 12; // Convert years to months for internal consistency if needed
 
             // Register user
             const registerResponse = await fetch(`${API_BASE_URL}/users/register`, {
@@ -157,7 +333,7 @@ function initOnboarding() {
             }
 
             hideLoading();
-            showToast('Growth path generated successfully! 🎉');
+            showToast('Growth path generated successfully! 🎉', 'success');
             showStatusMessage('onboarding-status', 'Success! Navigate to "My Roadmap" to see your personalized path.', 'success');
 
             // Switch to roadmap view
@@ -350,7 +526,7 @@ function renderItem(item, type) {
                     ${progress.status.replace('_', ' ')}
                 </span>
                 ${progress.status === 'completed' && progress.encouragement_message ?
-                    `<div class="encouragement-message">${progress.encouragement_message}</div>` : ''}
+            `<div class="encouragement-message">${progress.encouragement_message}</div>` : ''}
             </div>
         </div>
     `;
@@ -439,7 +615,7 @@ function displayTasks(tasks, filter = 'all') {
                     ${task.completion_date ? `<span>✓ ${new Date(task.completion_date).toLocaleDateString()}</span>` : ''}
                 </div>
                 ${task.encouragement_message ?
-                    `<div class="encouragement-message">${task.encouragement_message}</div>` : ''}
+            `<div class="encouragement-message">${task.encouragement_message}</div>` : ''}
             </div>
             <div class="task-actions">
                 ${task.status !== 'completed' ? `
@@ -530,6 +706,16 @@ async function loadProfile() {
         // Load resume
         const resumeResponse = await fetch(`${API_BASE_URL}/profile/${AppState.currentUser.id}/resume`);
         const resumeData = await resumeResponse.json();
+
+        // Populate editor fields
+        if (resumeData.resume && resumeData.resume.header) {
+            const h = resumeData.resume.header;
+            if (document.getElementById('res-phone')) document.getElementById('res-phone').value = h.phone || '';
+            if (document.getElementById('res-linkedin')) document.getElementById('res-linkedin').value = h.linkedin || '';
+            if (document.getElementById('res-github')) document.getElementById('res-github').value = h.github || '';
+            if (document.getElementById('res-portfolio')) document.getElementById('res-portfolio').value = h.portfolio || '';
+        }
+
         displayResume(resumeData.resume);
 
         // Load LinkedIn
@@ -549,39 +735,84 @@ async function loadProfile() {
 function displayResume(resume) {
     const container = document.getElementById('resume-content');
 
-    if (!resume || (Object.keys(resume).length === 0)) {
-        container.innerHTML = '<p class="empty-state">Complete tasks to build your resume</p>';
+    if (!resume || !resume.header) {
+        container.innerHTML = '<p class="empty-state">Loading resume data...</p>';
         return;
     }
 
-    let html = '';
+    const h = resume.header;
+    const contactParts = [];
+    if (h.email) contactParts.push(h.email);
+    if (h.phone) contactParts.push(h.phone);
+    if (h.location) contactParts.push(h.location);
+    if (h.linkedin) contactParts.push(`<a href="${h.linkedin}" target="_blank">LinkedIn</a>`);
+    if (h.github) contactParts.push(`<a href="${h.github}" target="_blank">GitHub</a>`);
+    if (h.portfolio) contactParts.push(`<a href="${h.portfolio}" target="_blank">Portfolio</a>`);
 
-    // Projects
-    if (resume.projects && resume.projects.length > 0) {
-        html += '<h3>Projects</h3>';
-        resume.projects.forEach(project => {
+    let html = `
+        <div class="resume-header">
+            <div class="resume-name">${h.name}</div>
+            <div class="resume-contact">
+                ${contactParts.join(' | ')}
+            </div>
+        </div>
+    `;
+
+    // Education
+    if (resume.education) {
+        html += `
+            <div class="resume-section-title">Education</div>
+            <div class="resume-entry">
+                <div class="resume-entry-header">
+                    <span>${resume.education.university}</span>
+                    <span>${resume.education.graduation_year}</span>
+                </div>
+                <div class="resume-entry-subheader">
+                    <span>${resume.education.major}</span>
+                </div>
+                ${resume.education.gpa ? `<div>GPA: ${resume.education.gpa}</div>` : ''}
+            </div>
+        `;
+    }
+
+    // Skills
+    if (resume.skills && resume.skills.length > 0) {
+        html += `
+            <div class="resume-section-title">Skills</div>
+            <div>${resume.skills.join(', ')}</div>
+        `;
+    }
+
+    // Experience
+    if (resume.experience && resume.experience.length > 0) {
+        html += `<div class="resume-section-title">Experience</div>`;
+        resume.experience.forEach(exp => {
             html += `
-                <div class="resume-item">
-                    <div class="resume-item-header">${project.name}</div>
-                    <div class="resume-item-date">${project.date}</div>
-                    <ul>
-                        ${project.bullets.map(bullet => `<li>${bullet}</li>`).join('')}
+                <div class="resume-entry">
+                    <div class="resume-entry-header">
+                        <span>${exp.title}</span>
+                        <span>${exp.date}</span>
+                    </div>
+                     <ul class="resume-list">
+                        ${exp.bullets.map(b => `<li>${b}</li>`).join('')}
                     </ul>
                 </div>
             `;
         });
     }
 
-    // Experience
-    if (resume.experience && resume.experience.length > 0) {
-        html += '<h3>Experience</h3>';
-        resume.experience.forEach(exp => {
+    // Projects
+    if (resume.projects && resume.projects.length > 0) {
+        html += `<div class="resume-section-title">Projects</div>`;
+        resume.projects.forEach(proj => {
             html += `
-                <div class="resume-item">
-                    <div class="resume-item-header">${exp.title}</div>
-                    <div class="resume-item-date">${exp.date}</div>
-                    <ul>
-                        ${exp.bullets.map(bullet => `<li>${bullet}</li>`).join('')}
+                <div class="resume-entry">
+                    <div class="resume-entry-header">
+                        <span>${proj.name}</span>
+                        <span>${proj.date}</span>
+                    </div>
+                     <ul class="resume-list">
+                        ${proj.bullets.map(b => `<li>${b}</li>`).join('')}
                     </ul>
                 </div>
             `;
@@ -590,26 +821,20 @@ function displayResume(resume) {
 
     // Certifications
     if (resume.certifications && resume.certifications.length > 0) {
-        html += '<h3>Certifications</h3>';
+        html += `<div class="resume-section-title">Certifications</div>`;
         resume.certifications.forEach(cert => {
             html += `
-                <div class="resume-item">
-                    <div class="resume-item-header">${cert.name}</div>
-                    <div class="resume-item-date">${cert.date}</div>
+                <div class="resume-entry">
+                    <div class="resume-entry-header">
+                        <span>${cert.name}</span>
+                        <span>${cert.date}</span>
+                    </div>
                 </div>
             `;
         });
     }
 
-    // Skills
-    if (resume.skills && resume.skills.length > 0) {
-        html += '<h3>Skills</h3>';
-        html += `<div class="skills-list">
-            ${resume.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
-        </div>`;
-    }
-
-    container.innerHTML = html || '<p class="empty-state">No resume data available yet</p>';
+    container.innerHTML = html;
 }
 
 function displayLinkedIn(data) {
@@ -683,6 +908,40 @@ function initProfileTabs() {
             document.getElementById(`${targetTab}-tab`).classList.add('active');
         });
     });
+
+    // Resume Details Form
+    const resumeForm = document.getElementById('resume-details-form');
+    if (resumeForm) {
+        resumeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!AppState.currentUser) return;
+
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE_URL}/profile/details`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: AppState.currentUser.id,
+                        phone_number: document.getElementById('res-phone').value,
+                        linkedin_url: document.getElementById('res-linkedin').value,
+                        github_url: document.getElementById('res-github').value,
+                        portfolio_url: document.getElementById('res-portfolio').value
+                    })
+                });
+
+                if (response.ok) {
+                    showToast('Contact details saved!', 'success');
+                    loadProfile(); // Reload to update resume
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to save details', 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+    }
 }
 
 // Profile Actions

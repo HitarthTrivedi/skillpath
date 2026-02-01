@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Powered Student Growth Planner</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
 </head>
+
 <body>
     <div id="app">
         <!-- Navigation -->
@@ -27,83 +29,170 @@
                     <h1>Welcome! Let's Build Your Growth Path 🚀</h1>
                     <p class="subtitle">Tell us about yourself and your career goals</p>
 
-                    <form id="onboarding-form">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="name">Full Name *</label>
-                                <input type="text" id="name" name="name" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="email">Email *</label>
-                                <input type="email" id="email" name="email" required>
-                            </div>
+                    <form id="onboarding-form" class="multi-step-form">
+                        <!-- Progress Indicator -->
+                        <div class="steps-indicator">
+                            <div class="step-dot active" data-step="1">1</div>
+                            <div class="step-line"></div>
+                            <div class="step-dot" data-step="2">2</div>
+                            <div class="step-line"></div>
+                            <div class="step-dot" data-step="3">3</div>
+                            <div class="step-line"></div>
+                            <div class="step-dot" data-step="4">4</div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="major">Major/Field of Study *</label>
-                                <input type="text" id="major" name="major"
-                                       placeholder="e.g., Computer Science, Business, Engineering" required>
+                        <!-- Step 1: Academics -->
+                        <div class="form-step active" data-step="1">
+                            <h3>Step 1: Academic Background 🎓</h3>
+                            <div class="form-group" style="text-align: center; margin-bottom: 2rem;">
+                                <div class="profile-upload-container">
+                                    <label for="profile-photo-input" class="profile-upload-label">
+                                        <div id="profile-preview" class="profile-preview-placeholder">
+                                            <span>📷 Upload Photo</span>
+                                        </div>
+                                    </label>
+                                    <input type="file" id="profile-photo-input" accept="image/*" style="display: none;">
+                                    <input type="hidden" id="profile-photo-base64" name="profile_photo">
+                                </div>
                             </div>
-
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="name">Full Name *</label>
+                                    <input type="text" id="name" name="name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email *</label>
+                                    <input type="email" id="email" name="email" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="major">Major/Field of Study *</label>
+                                    <input type="text" id="major" name="major" placeholder="e.g., Computer Science"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="university">University/Institution *</label>
+                                    <input type="text" id="university" name="university"
+                                        placeholder="e.g., Stanford University" required>
+                                </div>
+                            </div>
                             <div class="form-group">
                                 <label for="gpa">GPA (Optional)</label>
                                 <input type="number" id="gpa" name="gpa" step="0.01" min="0" max="4.0"
-                                       placeholder="0.00 - 4.00">
+                                    placeholder="0.00 - 4.00">
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="career-aspirations">Career Aspirations *</label>
-                            <textarea id="career-aspirations" name="career_aspirations" rows="3" required
-                                      placeholder="Describe your dream job, target industries, or career goals..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="current-skills">Current Skills *</label>
-                            <input type="text" id="current-skills" name="current_skills"
-                                   placeholder="e.g., Python, Leadership, Data Analysis (comma separated)" required>
-                            <small>Separate multiple skills with commas</small>
-                        </div>
-
-                        <div class="form-row">
+                        <!-- Step 2: Career Vision -->
+                        <div class="form-step" data-step="2">
+                            <h3>Step 2: Career Vision 🚀</h3>
                             <div class="form-group">
-                                <label for="learning-style">Preferred Learning Style *</label>
-                                <select id="learning-style" name="preferred_learning" required>
-                                    <option value="">Select...</option>
-                                    <option value="visual">Visual (videos, diagrams)</option>
-                                    <option value="hands-on">Hands-on (projects, practice)</option>
-                                    <option value="reading">Reading (articles, books)</option>
-                                    <option value="mixed">Mixed approach</option>
+                                <label for="career-aspirations">Career Aspirations *</label>
+                                <textarea id="career-aspirations" name="career_aspirations" rows="3" required
+                                    placeholder="Describe your dream job, target industries, or career goals..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="target-industries">Target Industries *</label>
+                                <input type="text" id="target-industries" name="target_industries"
+                                    placeholder="e.g., Fintech, AI, Healthcare (comma separated)" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Do you plan to relocate? 🌍</label>
+                                    <div class="toggle-container">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="relocation-toggle">
+                                            <span class="slider round"></span>
+                                        </label>
+                                        <span id="relocation-status">No</span>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="relocation-input-group" style="display: none;">
+                                    <label for="relocation-goal">Target Country/City</label>
+                                    <input type="text" id="relocation-goal" name="relocation_goal"
+                                        placeholder="e.g., Germany, Canada">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="planning-horizon">Planning Horizon: <span id="horizon-value">1 Year</span>
+                                    🗓️</label>
+                                <input type="range" id="planning-horizon" name="planning_horizon_years" min="1" max="8"
+                                    value="1" step="1" style="width: 100%;">
+                                <div
+                                    style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary);">
+                                    <span>1 Year</span>
+                                    <span>8 Years</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Skills & Experience -->
+                        <div class="form-step" data-step="3">
+                            <h3>Step 3: Skills & Experience 🛠️</h3>
+                            <div class="form-group">
+                                <label for="current-skills">Current Skills *</label>
+                                <input type="text" id="current-skills" name="current_skills"
+                                    placeholder="e.g., Python, SQL (comma separated)" required>
+                                <small>Separate multiple skills with commas</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="experience-level">Experience Level</label>
+                                <select id="experience-level" name="experience_level">
+                                    <option value="beginner">Beginner (Student/No Experience)</option>
+                                    <option value="intermediate">Intermediate (Internships/Projects)</option>
+                                    <option value="advanced">Advanced (Work Experience)</option>
                                 </select>
                             </div>
-
                             <div class="form-group">
-                                <label for="time-commitment">Weekly Time Commitment *</label>
-                                <select id="time-commitment" name="time_commitment" required>
-                                    <option value="">Select...</option>
-                                    <option value="5-10 hours">5-10 hours/week</option>
-                                    <option value="10-15 hours">10-15 hours/week</option>
-                                    <option value="15-20 hours">15-20 hours/week</option>
-                                    <option value="20+ hours">20+ hours/week</option>
-                                </select>
+                                <label for="extracurriculars">Extracurricular Interests (Optional)</label>
+                                <textarea id="extracurriculars" name="extracurricular_interests" rows="2"
+                                    placeholder="e.g., Chess Club, Debate Team, Violin, Soccer..."></textarea>
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="timeline">Growth Path Timeline</label>
-                            <select id="timeline" name="timeline">
-                                <option value="6">6 months</option>
-                                <option value="12" selected>12 months (1 year)</option>
-                                <option value="18">18 months</option>
-                                <option value="24">24 months (2 years)</option>
-                            </select>
+                        <!-- Step 4: Learning Preferences -->
+                        <div class="form-step" data-step="4">
+                            <h3>Step 4: Learning Preferences 📚</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="learning-style">Preferred Learning Style *</label>
+                                    <select id="learning-style" name="preferred_learning" required>
+                                        <option value="">Select...</option>
+                                        <option value="visual">Visual (videos, diagrams)</option>
+                                        <option value="hands-on">Hands-on (projects, practice)</option>
+                                        <option value="reading">Reading (articles, books)</option>
+                                        <option value="mixed">Mixed approach</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="time-commitment">Weekly Time Commitment *</label>
+                                    <select id="time-commitment" name="time_commitment" required>
+                                        <option value="">Select...</option>
+                                        <option value="5-10 hours">5-10 hours/week</option>
+                                        <option value="10-15 hours">10-15 hours/week</option>
+                                        <option value="15-20 hours">15-20 hours/week</option>
+                                        <option value="20+ hours">20+ hours/week</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="content-types">Preferred Content Types (Optional)</label>
+                                <input type="text" id="content-types" name="preferred_content_types"
+                                    placeholder="e.g., Video Tutorials, Interactive Labs, Books">
+                            </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-large">
-                            Generate My Growth Path ✨
-                        </button>
+                        <!-- Navigation Buttons -->
+                        <div class="form-navigation">
+                            <button type="button" class="btn btn-secondary" id="prev-btn"
+                                style="display: none;">Back</button>
+                            <button type="button" class="btn btn-primary" id="next-btn">Next</button>
+                            <button type="submit" class="btn btn-primary" id="submit-btn"
+                                style="display: none;">Generate Growth Path ✨</button>
+                        </div>
                     </form>
 
                     <div id="onboarding-status" class="status-message"></div>
@@ -165,6 +254,33 @@
 
                     <!-- Resume Tab -->
                     <div id="resume-tab" class="tab-content active">
+                        <!-- Personal Details Editor -->
+                        <div class="resume-editor-card">
+                            <h3>📝 Contact Details</h3>
+                            <form id="resume-details-form" class="form-row">
+                                <div class="form-group">
+                                    <label for="res-phone">Phone</label>
+                                    <input type="text" id="res-phone" placeholder="+1 (555) 123-4567">
+                                </div>
+                                <div class="form-group">
+                                    <label for="res-linkedin">LinkedIn URL</label>
+                                    <input type="text" id="res-linkedin" placeholder="linkedin.com/in/username">
+                                </div>
+                                <div class="form-group">
+                                    <label for="res-github">GitHub URL</label>
+                                    <input type="text" id="res-github" placeholder="github.com/username">
+                                </div>
+                                <div class="form-group">
+                                    <label for="res-portfolio">Portfolio/Website</label>
+                                    <input type="text" id="res-portfolio" placeholder="yourwebsite.com">
+                                </div>
+                                <div class="form-group" style="display: flex; align-items: flex-end;">
+                                    <button type="submit" class="btn btn-secondary" style="width: 100%;">💾 Save to
+                                        Resume</button>
+                                </div>
+                            </form>
+                        </div>
+
                         <div class="resume-section">
                             <h2>Auto-Generated Resume</h2>
                             <div id="resume-content" class="resume-display">
@@ -201,4 +317,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>

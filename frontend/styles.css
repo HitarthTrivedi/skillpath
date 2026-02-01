@@ -142,6 +142,71 @@ h3 {
     min-width: 250px;
 }
 
+/* Multi-step Form */
+.steps-indicator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 0 1rem;
+}
+
+.step-dot {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #64748b;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    z-index: 1;
+    transition: all 0.3s;
+}
+
+.step-dot.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    background: #e2e8f0;
+    margin: 0 10px;
+}
+
+.form-step {
+    display: none;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.form-step.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
 .form-row {
     display: flex;
     gap: 1rem;
@@ -168,6 +233,13 @@ select {
     transition: all 0.2s;
 }
 
+input.error,
+select.error,
+textarea.error {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
 input:focus,
 textarea:focus,
 select:focus {
@@ -186,6 +258,109 @@ small {
     margin-top: 0.25rem;
     color: var(--text-secondary);
     font-size: 0.875rem;
+}
+
+/* Toggle Switch */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked+.slider {
+    background-color: var(--primary-color);
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Profile Photo Upload */
+.profile-upload-container {
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+}
+
+.profile-preview-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: #e2e8f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    border: 3px solid white;
+    box-shadow: var(--shadow);
+    transition: all 0.2s;
+}
+
+.profile-preview-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-preview-placeholder:hover {
+    transform: scale(1.05);
+    border-color: var(--primary-color);
+}
+
+.profile-preview-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
 }
 
 /* Buttons */
@@ -547,12 +722,131 @@ small {
     display: block;
 }
 
-.resume-display {
-    background: var(--background);
-    padding: 2rem;
+.resume-editor-card {
+    background: white;
+    padding: 1.5rem;
     border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.resume-editor-card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.resume-display {
+    background: white;
+    padding: 3rem;
+    /* A4-like padding */
+    border-radius: 0.25rem;
     margin-bottom: 1.5rem;
-    min-height: 300px;
+    min-height: 800px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e5e5;
+    font-family: 'Times New Roman', Times, serif;
+    /* Classic resume font */
+    color: #000;
+}
+
+.resume-header {
+    text-align: center;
+    border-bottom: 2px solid #333;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.resume-name {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+.resume-contact {
+    font-size: 1rem;
+    color: #444;
+}
+
+.resume-section-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.25rem;
+}
+
+.resume-entry {
+    margin-bottom: 1rem;
+}
+
+.resume-entry-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 1.05rem;
+}
+
+.resume-entry-subheader {
+    display: flex;
+    justify-content: space-between;
+    font-style: italic;
+    margin-bottom: 0.25rem;
+    color: #444;
+}
+
+.resume-list {
+    margin-left: 1.5rem;
+    margin-top: 0.25rem;
+}
+
+.resume-list li {
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
+}
+
+.resume-skills-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.resume-skill-item {
+    background: none;
+    border: 1px solid #ccc;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .resume-display,
+    .resume-display * {
+        visibility: visible;
+    }
+
+    .resume-display {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+    }
 }
 
 .resume-section h3 {
@@ -670,7 +964,9 @@ small {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .loading-overlay p {
@@ -706,6 +1002,7 @@ small {
         transform: translateX(400px);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;

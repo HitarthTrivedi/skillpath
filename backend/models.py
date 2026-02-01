@@ -37,12 +37,29 @@ class StudentProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     major = db.Column(db.String(255))
+    university = db.Column(db.String(255))
     gpa = db.Column(db.Float)
     career_aspirations = db.Column(db.Text)
     current_skills = db.Column(db.Text)  # JSON string
+    experience_level = db.Column(db.String(50))
+    target_industries = db.Column(db.Text)  # JSON string
     preferred_learning = db.Column(db.String(100))
+    preferred_content_types = db.Column(db.Text)  # JSON string
     time_commitment = db.Column(db.String(50))
     analysis_data = db.Column(db.Text)  # JSON string - Gemini analysis results
+    
+    # New Fields for Long-term Planning
+    profile_photo = db.Column(db.Text)  # Base64 string or URL
+    relocation_goal = db.Column(db.String(255))
+    extracurricular_interests = db.Column(db.Text)  # JSON string
+    planning_horizon_years = db.Column(db.Integer, default=1)
+    
+    # Contact & Social Links
+    phone_number = db.Column(db.String(50))
+    linkedin_url = db.Column(db.String(255))
+    github_url = db.Column(db.String(255))
+    portfolio_url = db.Column(db.String(255))
+
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def get_skills(self):
@@ -50,6 +67,24 @@ class StudentProfile(db.Model):
 
     def set_skills(self, skills_list):
         self.current_skills = json.dumps(skills_list)
+
+    def get_target_industries(self):
+        return json.loads(self.target_industries) if self.target_industries else []
+
+    def set_target_industries(self, industries_list):
+        self.target_industries = json.dumps(industries_list)
+
+    def get_preferred_content_types(self):
+        return json.loads(self.preferred_content_types) if self.preferred_content_types else []
+
+    def set_preferred_content_types(self, content_types_list):
+        self.preferred_content_types = json.dumps(content_types_list)
+
+    def get_extracurricular_interests(self):
+        return json.loads(self.extracurricular_interests) if self.extracurricular_interests else []
+
+    def set_extracurricular_interests(self, interests_list):
+        self.extracurricular_interests = json.dumps(interests_list)
 
     def get_analysis(self):
         return json.loads(self.analysis_data) if self.analysis_data else {}
@@ -62,11 +97,23 @@ class StudentProfile(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'major': self.major,
+            'university': self.university,
             'gpa': self.gpa,
             'career_aspirations': self.career_aspirations,
             'current_skills': self.get_skills(),
+            'experience_level': self.experience_level,
+            'target_industries': self.get_target_industries(),
             'preferred_learning': self.preferred_learning,
+            'preferred_content_types': self.get_preferred_content_types(),
             'time_commitment': self.time_commitment,
+            'profile_photo': self.profile_photo,
+            'relocation_goal': self.relocation_goal,
+            'extracurricular_interests': self.get_extracurricular_interests(),
+            'planning_horizon_years': self.planning_horizon_years,
+            'phone_number': self.phone_number,
+            'linkedin_url': self.linkedin_url,
+            'github_url': self.github_url,
+            'portfolio_url': self.portfolio_url,
             'analysis': self.get_analysis(),
             'updated_at': self.updated_at.isoformat()
         }

@@ -29,17 +29,25 @@ You are an expert career advisor analyzing a student's profile.
 
 Student Information:
 - Major: {profile_data.get('major', 'Not specified')}
+- University: {profile_data.get('university', 'Not specified')}
+- GPa: {profile_data.get('gpa', 'Not specified')}
+- Experience Level: {profile_data.get('experience_level', 'Not specified')}
 - Career Aspirations: {profile_data.get('career_aspirations', 'Not specified')}
+- Target Industries: {', '.join(profile_data.get('target_industries', []))}
 - Current Skills: {', '.join(profile_data.get('current_skills', []))}
-- GPA: {profile_data.get('gpa', 'Not specified')}
 - Preferred Learning Style: {profile_data.get('preferred_learning', 'Not specified')}
+- Preferred Content Types: {', '.join(profile_data.get('preferred_content_types', []))}
 - Time Commitment: {profile_data.get('time_commitment', 'Not specified')}
+- Relocation Goal: {profile_data.get('relocation_goal', 'None')}
+- Extracurricular Interests: {', '.join(profile_data.get('extracurricular_interests', []))}
+- Planning Horizon: {profile_data.get('planning_horizon_years', 1)} Years
 
 Task: Analyze this profile and provide:
 1. Key strengths (2-3 points)
 2. Skill gaps to address (2-3 points)
 3. Recommended career paths (top 3, ordered from most specific to broad)
 4. Learning approach optimization tips (2-3 actionable tips)
+5. Advice on relocation and extracurricular balance (if applicable)
 
 Format your response as JSON with keys: "strengths", "gaps", "career_paths", "learning_tips"
 Each value should be an array of strings.
@@ -87,46 +95,53 @@ Return ONLY valid JSON, no additional text.
         target_role = analysis.get('career_paths', ['Professional'])[0]
         skill_gaps = ', '.join(analysis.get('gaps', []))
 
+        years = int(profile_data.get('planning_horizon_years', 1))
+        
         prompt = f"""
-You are an expert educational and career strategist creating a personalized growth roadmap.
+You are an expert educational and career strategist creating a personalized {years}-year growth roadmap.
 
 Student Profile:
 - Major: {profile_data.get('major')}
+- University: {profile_data.get('university')}
 - Target Role: {target_role}
+- Target Industries: {', '.join(profile_data.get('target_industries', []))}
+- Experience Level: {profile_data.get('experience_level')}
 - Current Skills: {', '.join(profile_data.get('current_skills', []))}
 - Skill Gaps: {skill_gaps}
 - Time Commitment: {profile_data.get('time_commitment')}
-- Timeline: {timeline_months} months
+- Content Preference: {', '.join(profile_data.get('preferred_content_types', []))}
+- Relocation Goal: {profile_data.get('relocation_goal', 'None')}
+- Extracurricular Interests: {', '.join(profile_data.get('extracurricular_interests', []))}
+- Planning Horizon: {years} Years
 
 Current Industry Trends:
 {trend_data}
 
-Task: Generate a detailed, phased growth plan with 4 phases covering {timeline_months} months. 
-Each phase should be approximately {timeline_months // 4} months.
+Task: Generate a detailed, phased growth plan with {years} phases, where each phase represents 1 YEAR.
 
-For each phase, provide:
+For each phase (Year), provide:
 
-1. **Courses**: 2-3 specific online courses with name, platform (Coursera, edX, Udemy, etc.), estimated duration, and clear rationale
+1. **Courses**: 2-3 specific online courses with name, platform, estimated duration, and clear rationale
 2. **Tests/Certifications**: Relevant exams with target scores, timing, and rationale
-3. **Internships**: Types, timing (when to start applying), target companies/industries, and rationale
-4. **Certificates**: Industry-recognized certifications with provider, timing, and rationale
+3. **Internships/Jobs**: Types, timing, target companies/industries, and rationale
+4. **Extracurricular Activities**: Clubs, hobbies, or volunteering aligned with interests and goals
 5. **Projects**: 2-3 practical projects with name, description, skills demonstrated, and rationale
+6. **Weekly Routine**: A friendly, sample weekly schedule (e.g., "Mon/Wed: German Class, Sat: Coding Project") tailored to this phase's goals.
 
 Guidelines:
-- Each recommendation must have clear rationale tied to career goals
-- Build progressively: Phase 1 (Foundation) → Phase 2 (Intermediate) → Phase 3 (Advanced) → Phase 4 (Specialized)
-- Balance theory and practice
-- Consider time constraints
-- Ensure projects demonstrate skills needed for target role
-- Make recommendations specific and actionable
+- **Long-term View**: If relocation is a goal (e.g., to Germany), include language learning (A1-C1) and visa prep in earlier years.
+- **Holistic**: Integrate extracurriculars to build soft skills.
+- **Friendly Tone**: The "Weekly Routine" should sound encouraging and doable.
+- **Progression**: ensuring skills build up year over year.
 
 Format as JSON with this EXACT structure:
 {{
   "phases": [
     {{
       "phase": 1,
-      "title": "Foundation Building (Months 1-3)",
-      "focus": "Build core fundamentals",
+      "title": "Year 1: [Theme Name]",
+      "focus": "Main focus of this year",
+      "weekly_routine": "Sample weekly schedule (e.g., Mon-Fri: ... Sat: ...)",
       "courses": [
         {{
           "id": "c1",
