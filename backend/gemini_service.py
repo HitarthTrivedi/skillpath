@@ -378,6 +378,171 @@ Current Industry Trends (2025-2026):
 """
         return common_trends
 
+    def generate_growth_path_extension(self, profile_data: Dict, analysis: Dict, 
+                                       completed_items: List[Dict], current_phase: int,
+                                       planning_horizon_years: int = 1) -> Dict:
+        """
+        Generate next phase of growth path based on completed progress
+        """
+        target_role = analysis.get('career_paths', ['Professional'])[0]
+        
+        completed_summary = "\n".join([
+            f"- {item['name']} ({item['type']})" 
+            for item in completed_items[-10:]  # Last 10 completed items
+        ])
+
+        prompt = f"""
+You are an expert educational and career strategist extending a personalized growth roadmap.
+
+Student Profile:
+- Major: {profile_data.get('major')}
+- Target Role: {target_role}
+- Target Industries: {', '.join(profile_data.get('target_industries', []))}
+- Current Skills: {', '.join(profile_data.get('current_skills', []))}
+- Time Commitment: {profile_data.get('time_commitment')}
+
+Recently Completed Items:
+{completed_summary}
+
+Task: Generate Phase {current_phase} (Year {current_phase}) of the growth plan, building on the completed work.
+
+This phase should:
+1. Build upon skills gained from completed items
+2. Progress to more advanced topics/projects
+3. Include next-level courses, certifications, internships, and projects
+4. Align with the target role and industries
+5. Include a weekly routine that fits the time commitment
+
+Format as JSON with this EXACT structure (single phase object, not wrapped in "phases" array):
+{{
+  "phase": {current_phase},
+  "title": "Year {current_phase}: [Theme Name]",
+  "focus": "Main focus of this year",
+  "weekly_routine": "Sample weekly schedule",
+  "courses": [
+    {{
+      "id": "c{current_phase}1",
+      "name": "Course Name",
+      "platform": "Platform Name",
+      "duration": "X weeks",
+      "rationale": "Why this course"
+    }}
+  ],
+  "tests": [
+    {{
+      "id": "t{current_phase}1",
+      "name": "Test Name",
+      "target_score": "Score or Grade",
+      "timing": "When to take",
+      "rationale": "Why this test"
+    }}
+  ],
+  "internships": [
+    {{
+      "id": "i{current_phase}1",
+      "type": "Internship Type",
+      "when": "Application timeline",
+      "companies": ["Company examples"],
+      "rationale": "Why this internship"
+    }}
+  ],
+  "certificates": [
+    {{
+      "id": "cert{current_phase}1",
+      "name": "Certificate Name",
+      "provider": "Provider Name",
+      "timing": "When to get",
+      "rationale": "Why this certificate"
+    }}
+  ],
+  "projects": [
+    {{
+      "id": "p{current_phase}1",
+      "name": "Project Name",
+      "description": "Project description",
+      "skills_demonstrated": ["skill1", "skill2"],
+      "rationale": "Why this project"
+    }}
+  ]
+}}
+
+Return ONLY valid JSON, no additional text or markdown.
+"""
+
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config
+            )
+
+            response_text = response.text.strip()
+            
+            # Clean response
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]
+            if response_text.startswith('```'):
+                response_text = response_text[3:]
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]
+
+            result = json.loads(response_text.strip())
+            
+            # Validate that we got a phase with items
+            if not isinstance(result, dict):
+                raise ValueError("Response is not a dictionary")
+            
+            if 'phase' not in result:
+                raise ValueError("Response missing 'phase' field")
+            
+            # Ensure all category arrays exist (even if empty)
+            for category in ['courses', 'tests', 'internships', 'certificates', 'projects']:
+                if category not in result:
+                    result[category] = []
+                    print(f"Warning: {category} missing from response, adding empty array")
+            
+            # Log what was generated
+            total_items = sum(len(result.get(cat, [])) for cat in ['courses', 'tests', 'internships', 'certificates', 'projects'])
+            print(f"Generated phase {result.get('phase')} with {total_items} total items")
+            
+            return result
+
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error in generate_growth_path_extension: {e}")
+            print(f"Response text: {response_text[:500]}")  # First 500 chars
+            raise
+        except Exception as e:
+            print(f"Error in generate_growth_path_extension: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return a simple fallback phase with at least some items
+            return {
+                "phase": current_phase,
+                "title": f"Year {current_phase}: Advanced Development",
+                "focus": "Building on completed foundations",
+                "weekly_routine": "Continue learning and building projects",
+                "courses": [
+                    {
+                        "id": f"c{current_phase}1",
+                        "name": "Advanced Course",
+                        "platform": "TBD",
+                        "duration": "8 weeks",
+                        "rationale": "Continue skill development"
+                    }
+                ],
+                "tests": [],
+                "internships": [],
+                "certificates": [],
+                "projects": [
+                    {
+                        "id": f"p{current_phase}1",
+                        "name": "Advanced Project",
+                        "description": "Build on previous skills",
+                        "skills_demonstrated": ["Advanced Skills"],
+                        "rationale": "Apply learned concepts"
+                    }
+                ]
+            }
+
     def _get_fallback_roadmap(self, target_role: str) -> Dict:
         """
         Fallback roadmap if Gemini fails

@@ -4,6 +4,7 @@ from models import db, User, StudentProfile, GrowthPath, ProgressTracker, Profes
 from gemini_service import GeminiService
 from datetime import datetime
 import os
+import json
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -360,6 +361,186 @@ def get_growth_path(user_id):
     }), 200
 
 
+@app.route('/api/v1/growth-path/extend', methods=['POST'])
+def extend_growth_path_endpoint():
+    """Extend roadmap when all tasks are completed"""
+    data = request.json
+    user_id = data.get('user_id')
+
+    if not user_id:
+        return jsonify({'error': 'user_id is required'}), 400
+
+    try:
+        # Verify all tasks are completed before extending
+        all_tasks = ProgressTracker.query.filter_by(user_id=user_id).all()
+        completed_tasks = [t for t in all_tasks if t.status == 'completed']
+        
+        if len(all_tasks) == 0:
+            return jsonify({'error': 'No tasks found. Please generate a roadmap first.'}), 400
+        
+        if len(completed_tasks) != len(all_tasks):
+            return jsonify({
+                'error': 'Not all tasks are completed yet',
+                'completed': len(completed_tasks),
+                'total': len(all_tasks)
+            }), 400
+        
+        # Store task count before extension
+        all_tasks = ProgressTracker.query.filter_by(user_id=user_id).all()
+        task_count_before = len(all_tasks)
+        
+        result = extend_growth_path(user_id)
+        
+        # Verify tasks were actually created
+        all_tasks_after = ProgressTracker.query.filter_by(user_id=user_id).all()
+        new_task_count = len(all_tasks_after) - task_count_before
+        
+        if new_task_count == 0:
+            print("WARNING: Extension completed but no new tasks were created!")
+            return jsonify({
+                'error': 'Roadmap extended but no tasks were created. Please check backend logs.',
+                'new_phase': result,
+                'tasks_created': 0
+            }), 500
+        
+        return jsonify({
+            'message': 'Roadmap extended successfully',
+            'new_phase': result,
+            'tasks_added': True,
+            'tasks_created': new_task_count
+        }), 201
+    except Exception as e:
+        print(f"Error extending roadmap: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+def extend_growth_path(user_id):
+    """Extend the growth path with a new phase"""
+    if not gemini_service:
+        raise Exception('Gemini service not available')
+
+    user = User.query.get(user_id)
+    profile = StudentProfile.query.filter_by(user_id=user_id).first()
+    current_path = GrowthPath.query.filter_by(user_id=user_id, is_active=True).first()
+
+    if not user or not profile or not current_path:
+        raise Exception('User, profile, or active growth path not found')
+
+    # Get current roadmap
+    current_roadmap = current_path.get_roadmap()
+    current_phases = current_roadmap.get('phases', [])
+    next_phase_number = len(current_phases) + 1
+
+    # Get completed items for context
+    completed_items = ProgressTracker.query.filter_by(
+        user_id=user_id,
+        status='completed'
+    ).all()
+
+    print(f"Extending roadmap for user {user_id}, phase {next_phase_number}")
+    print(f"Found {len(completed_items)} completed items")
+
+    # Generate next phase using Gemini
+    roadmap_extension = gemini_service.generate_growth_path_extension(
+        profile_data={
+            'major': profile.major,
+            'university': profile.university,
+            'career_aspirations': profile.career_aspirations,
+            'experience_level': profile.experience_level,
+            'target_industries': profile.get_target_industries(),
+            'current_skills': profile.get_skills(),
+            'preferred_content_types': profile.get_preferred_content_types(),
+            'time_commitment': profile.time_commitment,
+            'planning_horizon_years': profile.planning_horizon_years or 1
+        },
+        analysis=profile.get_analysis(),
+        completed_items=[{
+            'name': item.item_name,
+            'type': item.item_type,
+            'completed_date': item.completion_date.isoformat() if item.completion_date else None
+        } for item in completed_items],
+        current_phase=next_phase_number,
+        planning_horizon_years=profile.planning_horizon_years or 1
+    )
+
+    # Debug: Check what was generated
+    print(f"Generated phase: {roadmap_extension.get('title', 'No title')}")
+    print(f"Phase has {len(roadmap_extension.get('courses', []))} courses")
+    print(f"Phase has {len(roadmap_extension.get('projects', []))} projects")
+    print(f"Phase has {len(roadmap_extension.get('tests', []))} tests")
+    print(f"Phase has {len(roadmap_extension.get('internships', []))} internships")
+    print(f"Phase has {len(roadmap_extension.get('certificates', []))} certificates")
+
+    # Add new phase to existing roadmap
+    current_roadmap['phases'].append(roadmap_extension)
+    current_path.set_roadmap(current_roadmap)
+    current_path.phase = next_phase_number
+
+    # Create progress trackers for new phase items
+    new_phase = roadmap_extension
+    tasks_created = 0
+    
+    for category in ['courses', 'tests', 'internships', 'certificates', 'projects']:
+        items = new_phase.get(category, [])
+        print(f"Processing {len(items)} items in category: {category}")
+        
+        for item in items:
+            # Determine item type (remove 's' from plural category names)
+            item_type = category[:-1] if category.endswith('s') else category
+            
+            # Get item name based on category - handle different field names
+            if category == 'internships':
+                item_name = item.get('type') or item.get('name') or 'Internship'
+            elif category == 'tests':
+                item_name = item.get('name') or 'Test'
+            elif category == 'certificates':
+                item_name = item.get('name') or 'Certificate'
+            elif category == 'projects':
+                item_name = item.get('name') or 'Project'
+            else:  # courses
+                item_name = item.get('name') or 'Course'
+            
+            # Ensure item has an ID
+            if 'id' not in item:
+                # Generate a unique ID if missing
+                item_index = items.index(item) + 1
+                item['id'] = f"{item_type[0]}{next_phase_number}{item_index}"
+            
+            print(f"Creating tracker for: {item_name} (id: {item['id']}, type: {item_type})")
+            
+            # Check if tracker already exists (prevent duplicates)
+            existing_tracker = ProgressTracker.query.filter_by(
+                user_id=user_id,
+                item_id=item['id']
+            ).first()
+            
+            if existing_tracker:
+                print(f"Tracker already exists for {item['id']}, skipping")
+            else:
+                tracker = ProgressTracker(
+                    user_id=user_id,
+                    item_id=item['id'],
+                    item_type=item_type,
+                    item_name=item_name,
+                    status='not_started'
+                )
+                db.session.add(tracker)
+                tasks_created += 1
+                print(f"Added tracker for {item_name}")
+
+    db.session.commit()
+    print(f"Created {tasks_created} new tasks for phase {next_phase_number}")
+    
+    if tasks_created == 0:
+        print("WARNING: No tasks were created! Check if phase has items.")
+        # Log the full phase structure for debugging
+        print(f"Full phase structure: {json.dumps(roadmap_extension, indent=2)}")
+    
+    return roadmap_extension
+
+
 # ============================================================================
 # PROGRESS TRACKING ENDPOINTS
 # ============================================================================
@@ -416,9 +597,20 @@ def update_progress():
         except Exception as e:
             print(f"Error updating professional profile: {e}")
 
+    # Check if all tasks are completed and return flag for frontend
+    all_completed = False
+    if status == 'completed':
+        try:
+            all_tasks = ProgressTracker.query.filter_by(user_id=user_id).all()
+            completed_tasks = [t for t in all_tasks if t.status == 'completed']
+            all_completed = len(completed_tasks) == len(all_tasks) and len(all_tasks) > 0
+        except Exception as e:
+            print(f"Error checking for completion: {e}")
+
     return jsonify({
         'message': 'Progress updated successfully',
-        'progress': tracker.to_dict()
+        'progress': tracker.to_dict(),
+        'all_completed': all_completed
     }), 200
 
 
@@ -576,7 +768,7 @@ def get_linkedin_suggestions(user_id):
     """Get LinkedIn suggestions"""
     profile = ProfessionalProfile.query.filter_by(user_id=user_id).first()
 
-    if not profile:
+    if not profile or not profile.get_linkedin():
         # Generate fresh suggestions
         if gemini_service:
             try:

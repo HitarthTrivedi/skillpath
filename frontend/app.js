@@ -355,6 +355,45 @@ async function getUserIdByEmail(email) {
     return 1; // Simplified for demo
 }
 
+// Helper function to check if all tasks are completed
+async function checkAllTasksCompleted() {
+    if (!AppState.currentUser) return false;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/progress/${AppState.currentUser.id}/summary`);
+        const summary = await response.json();
+        return summary.total > 0 && summary.completed === summary.total;
+    } catch (error) {
+        console.error('Error checking completion:', error);
+        return false;
+    }
+}
+
+// Update extend button state based on completion status
+function updateExtendButtonState() {
+    const extendButton = document.getElementById('extend-roadmap');
+    if (!extendButton) return;
+
+    checkAllTasksCompleted().then(allCompleted => {
+        extendButton.disabled = !allCompleted;
+        if (allCompleted) {
+            extendButton.classList.add('btn-primary');
+            extendButton.classList.remove('btn-secondary');
+            extendButton.title = 'Extend your roadmap with new challenges';
+        } else {
+            extendButton.classList.add('btn-secondary');
+            extendButton.classList.remove('btn-primary');
+            extendButton.title = 'Complete all tasks to extend roadmap';
+        }
+    }).catch(error => {
+        console.error('Error updating extend button state:', error);
+        // On error, disable button to be safe
+        if (extendButton) {
+            extendButton.disabled = true;
+        }
+    });
+}
+
 // Roadmap Display
 async function loadRoadmap() {
     if (!AppState.currentUser) {
@@ -389,6 +428,10 @@ async function loadRoadmap() {
         AppState.roadmap = roadmapData.enriched_roadmap;
 
         displayRoadmap(AppState.roadmap);
+        
+        // Update extend button state
+        updateExtendButtonState();
+        
         hideLoading();
 
     } catch (error) {
@@ -663,16 +706,60 @@ async function updateTaskStatus(itemId, status) {
                     showToast(data.progress.encouragement_message, 'info');
                 }, 1000);
             }
+            
+            // Check if all tasks are completed and show notification
+            if (data.all_completed) {
+                setTimeout(() => {
+                    showToast('🎊 Congratulations! You\'ve completed all tasks! You can now extend your roadmap.', 'success');
+                }, 2000);
+            }
         } else {
             showToast('Task status updated', 'success');
         }
 
         // Reload progress
         await loadProgress();
+        
+        // Update extend button state if we're on the roadmap page
+        if (AppState.currentPage === 'roadmap') {
+            updateExtendButtonState();
+        }
 
     } catch (error) {
         console.error('Error updating task:', error);
         showToast('Error updating task', 'error');
+        hideLoading();
+    }
+}
+
+async function extendRoadmap() {
+    if (!AppState.currentUser) return;
+
+    showLoading();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/growth-path/extend`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: AppState.currentUser.id
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to extend roadmap');
+        }
+
+        hideLoading();
+        showToast('🚀 Roadmap extended with new challenges!', 'success');
+        
+        // Reload roadmap and progress
+        await loadRoadmap();
+        await loadProgress();
+
+    } catch (error) {
+        console.error('Error extending roadmap:', error);
+        showToast('Error extending roadmap', 'error');
         hideLoading();
     }
 }
@@ -1028,6 +1115,54 @@ function initRoadmapActions() {
         } catch (error) {
             console.error('Error regenerating roadmap:', error);
             showToast('Error regenerating roadmap', 'error');
+            hideLoading();
+        }
+    });
+
+    // Add extend roadmap button handler
+    document.getElementById('extend-roadmap').addEventListener('click', async () => {
+        if (!AppState.currentUser) return;
+
+        const confirmed = confirm('This will extend your roadmap with new challenges. Continue?');
+        if (!confirmed) return;
+
+        showLoading();
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/growth-path/extend`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: AppState.currentUser.id
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to extend roadmap');
+            }
+
+            hideLoading();
+            showToast('🚀 Roadmap extended with new challenges!', 'success');
+            
+            // Disable button immediately since new tasks are added
+            const extendButton = document.getElementById('extend-roadmap');
+            if (extendButton) {
+                extendButton.disabled = true;
+                extendButton.classList.add('btn-secondary');
+                extendButton.classList.remove('btn-primary');
+            }
+            
+            // Reload roadmap and progress
+            await loadRoadmap();
+            await loadProgress();
+            
+            // Update button state after reload (should remain disabled since new tasks exist)
+            updateExtendButtonState();
+
+        } catch (error) {
+            console.error('Error extending roadmap:', error);
+            showToast(error.message || 'Error extending roadmap', 'error');
             hideLoading();
         }
     });
