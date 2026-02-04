@@ -11,13 +11,24 @@ class GeminiService:
 
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # 1. FORMALIZED SYSTEM INSTRUCTION
+        # This keeps the AI "in character" for every single method call.
+        self.model = genai.GenerativeModel(
+            model_name='gemini-2.0-flash',
+            system_instruction="""You are SkillPath AI, a sophisticated career strategist and technical mentor. 
+            You provide raw, honest, and technically detailed advice. 
+            You avoid corporate fluff (e.g., "Keep learning!") and favor 'Tech-in-the-trenches' storytelling.
+            You always prioritize specific tool names (e.g., 'React Query' over 'libraries') and actionable metrics."""
+        )
 
-        # Generation configuration
+        # 2. NATIVE JSON CONFIGURATION
+        # "response_mime_type": "application/json" guarantees valid JSON output.
         self.generation_config = {
-            "temperature": 0.7,
-            "top_p": 0.9,
+            "temperature": 0.85,  # Slightly higher for creativity
+            "top_p": 0.95,
             "max_output_tokens": 8192,
+            "response_mime_type": "application/json", 
         }
 
     def analyze_student_profile(self, profile_data: Dict) -> Dict:
@@ -302,39 +313,137 @@ Return ONLY valid JSON, no additional text.
 
     def generate_linkedin_content(self, user_context: Dict) -> Dict:
         """
-        Generate LinkedIn post ideas and profile updates
+        Generate high-engagement LinkedIn post ideas and profile updates
         """
         prompt = f"""
-Generate LinkedIn content suggestions for a student with:
+        You are writing high-impact LinkedIn posts for a tech student.
 
-Profile:
-- Recent achievements: {', '.join(user_context.get('recent_achievements', []))}
-- New skills: {', '.join(user_context.get('new_skills', []))}
-- Career goal: {user_context.get('career_goal', 'Professional development')}
-- Current phase: {user_context.get('current_phase', 'Learning')}
+        Student Profile:
+        - Recent achievements: {', '.join(user_context.get('recent_achievements', []))}
+        - Current Skills: {', '.join(user_context.get('current_skills', []))}
+        - New skills: {', '.join(user_context.get('new_skills', []))}
+        - Career goal: {user_context.get('career_goal', 'Professional development')}
+        - Current phase: {user_context.get('current_phase', 'Learning')}
 
-Generate:
-1. **Post Ideas**: 3 LinkedIn post ideas that showcase their learning journey and achievements
-2. **Profile Summary**: A 2-3 sentence professional summary highlighting their skills and aspirations
-3. **Skills to Add**: 5-7 skills they should add to their LinkedIn profile
+        ### NEGATIVE CONSTRAINTS (DO NOT DO THIS):
+        - ❌ NEVER start a post with "Excited to share", "Thrilled to announce", or "Delighted to say".
+        - ❌ Avoid generic advice like "Consistency is key" or "Keep grinding".
+        - ❌ Do not use emojis in the hashtags.
 
-Format as JSON:
-{{
-  "post_ideas": [
-    {{"topic": "...", "draft": "...", "hashtags": ["..."]}},
-    ...
-  ],
-  "profile_summary": "...",
-  "skills_to_add": ["skill1", "skill2", ...]
-}}
+        ### GOLD STANDARD EXAMPLE (MIMIC THIS DEPTH):
+        "College syllabuses are often 5 years behind. I spent 12 hours a day in lectures learning outdated concepts while the industry moved to LLM orchestration. That’s why I built a custom RAG pipeline using LangChain and Pinecone. The hardest part wasn't the code; it was managing the context window limit. This project taught me more about vector databases than my entire semester."
 
-Return ONLY valid JSON, no additional text.
-"""
+        ### TASK:
+        Generate:
+        1. **Post Ideas**: 3 LinkedIn post ideas. The 'draft' MUST be a cohesive, first-person narrative (approx 150-200 words) using the "Problem-Agitation-Solution" framework. Mention specific tools from their skills list.
+        2. **Profile Summary**: A 2-3 sentence professional summary.
+        3. **Skills to Add**: 5-7 skills they should add.
+
+        Format as JSON:
+        {{
+          "post_ideas": [
+            {{
+                "topic": "Short punchy topic", 
+                "draft": "The full ~200 word post content...", 
+                "hashtags": ["tag1", "tag2"]
+            }},
+            ...
+          ],
+          "profile_summary": "...",
+          "skills_to_add": ["..."]
+        }}
+        """
+
+        try:
+            # Generate content
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config
+            )
+
+            # FIX 1: Parse the JSON string into a Python Dictionary
+            return json.loads(response.text)
+
+        except Exception as e:
+            print(f"Error in generate_linkedin_content: {e}")
+            # Fallback in case of error
+            return {
+                "post_ideas": [
+                    {
+                        "topic": "Error Generation",
+                        "draft": f"I'm currently deep-diving into {user_context.get('career_goal')}. It's challenging but rewarding to build with {', '.join(user_context.get('current_skills', [])[:3])}.",
+                        "hashtags": ["tech", "learning"]
+                    }
+                ],
+                "profile_summary": "Aspiring technologist focused on continuous improvement.",
+                "skills_to_add": []
+            }
+
+    # Override with richer prompt for personalization
+    def generate_linkedin_content(self, user_context: Dict) -> Dict:
+        """
+        Generate richer LinkedIn post ideas and profile updates (overrides earlier version)
+        """
+        # Replace the prompt block inside generate_linkedin_content with this:
+        prompt = f"""
+        You are writing LinkedIn posts for a student in tech.
+
+        Profile:
+        - Name: {user_context.get('name', '')}
+        - Major: {user_context.get('major', 'Not specified')}
+        - University: {user_context.get('university', 'Not specified')}
+        - Experience level: {user_context.get('experience_level', 'Not specified')}
+        - Career goal: {user_context.get('career_goal', 'Professional development')}
+        - Career aspirations: {user_context.get('career_aspirations', '')}
+        - Target industries: {', '.join(user_context.get('target_industries', []))}
+        - Current skills: {', '.join(user_context.get('current_skills', []))}
+        - Recent achievements: {user_context.get('recent_achievements', [])}
+
+        Write posts similar in depth and structure to this style (DO NOT copy content, just the pattern):
+
+        Example Structure:
+        - Hook: 1 punchy sentence calling out a real frustration or insight.
+        - Problem: 2–3 sentences describing what’s broken or confusing today.
+        - Solution: 2–3 sentences describing what the student built/learned/is doing.
+        - How it works: 3–5 sentences with specific tools, APIs, stacks, or concepts.
+        - Technical win: 2–3 sentences highlighting what they learned technically.
+        - Vision: 2–3 sentences about why this matters for students / their career.
+        - CTA: 1 sentence asking a genuine question to the audience.
+        - Hashtags: 7–10 relevant hashtags, no emojis in hashtags.
+
+        Generate 3 post ideas, each with this JSON structure:
+
+        {{
+        "post_ideas": [
+            {{
+            "topic": "Short topic line",
+            "hook": "1 sentence hook",
+            "problem": "2-3 sentences explaining the problem.",
+            "solution": "2-3 sentences explaining their approach or tool.",
+            "how_it_works": "3-5 sentences with concrete technical details (APIs, frameworks, models, datasets, etc.) tailored to their profile.",
+            "technical_win": "2-3 sentences about what they learned technically.",
+            "vision": "2-3 sentences about the bigger picture or impact.",
+            "cta": "1 sentence question to invite replies.",
+            "draft": "A single LinkedIn-ready post that weaves all of the above into 160-220 words, in first person, friendly but professional.",
+            "hashtags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7"]
+            }},
+            ...
+         ],
+         "profile_summary": "3-4 sentence summary tailored to their major, target industries, and recent achievements.",
+         "skills_to_add": ["skill1", "skill2", ...]
+        }}
+
+        Requirements:
+        - The "draft" must read like a complete LinkedIn post similar in richness and length to the example, not bullet points.
+        - Use specific tools/skills relevant to the profile (for example: Python, Flask, Gemini AI, cybersecurity, etc., if they fit the user's data).
+        - Always return ONLY valid JSON, no markdown, no extra text.
+        """
+
 
         try:
             response = self.model.generate_content(
                 prompt,
-                generation_config={"temperature": 0.8, "max_output_tokens": 1000}
+                generation_config={"temperature": 0.8, "max_output_tokens": 1200}
             )
 
             response_text = response.text.strip()
@@ -354,7 +463,9 @@ Return ONLY valid JSON, no additional text.
                 "post_ideas": [
                     {
                         "topic": "Learning Journey",
-                        "draft": f"Excited to share my progress in {user_context.get('career_goal', 'my career development')}!",
+                        "draft": f"Excited to share my progress in {user_context.get('career_goal', 'my career development')}! Recently completed projects are helping me deepen skills in {', '.join(user_context.get('current_skills', []))}.",
+                        "angle": "Shows consistent growth and applied learning",
+                        "call_to_action": "What resources helped you level up in this area?",
                         "hashtags": ["learning", "growth", "career"]
                     }
                 ],

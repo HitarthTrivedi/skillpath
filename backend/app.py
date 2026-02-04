@@ -42,24 +42,34 @@ def get_user_context(user_id):
         status='completed'
     ).all()
 
-    recent_achievements = [p.item_name for p in completed[-5:]] if completed else []
-
-    # Extract skills from completed items
-    all_skills = set()
-    for item in completed:
-        if item.item_type == 'project' or item.item_type == 'course':
-            # You could store skills in notes or parse from item data
-            pass
+    recent_achievements = [
+        {
+            'item_name': p.item_name,
+            'item_type': p.item_type,
+            'completion_date': p.completion_date.isoformat() if p.completion_date else None
+        }
+        for p in completed[-5:]
+    ] if completed else []
 
     analysis = profile.get_analysis() if profile else {}
     career_goal = analysis.get('career_paths', ['Professional'])[0] if analysis else 'Professional'
 
     return {
-        'completed_count': len(completed),
-        'current_phase': 1,  # Could be calculated from progress
+        'name': user.name if user else None,
+        'major': profile.major if profile else None,
+        'university': profile.university if profile else None,
+        'experience_level': profile.experience_level if profile else None,
         'career_goal': career_goal,
+        'career_aspirations': profile.career_aspirations if profile else None,
+        'target_industries': profile.get_target_industries() if profile else [],
+        'current_skills': profile.get_skills() if profile else [],
+        'preferred_learning': profile.preferred_learning if profile else None,
+        'preferred_content_types': profile.get_preferred_content_types() if profile else [],
+        'time_commitment': profile.time_commitment if profile else None,
         'recent_achievements': recent_achievements,
-        'new_skills': profile.get_skills() if profile else []
+        'new_skills': profile.get_skills() if profile else [],
+        'completed_count': len(completed),
+        'current_phase': 1  # could be refined later
     }
 
 
